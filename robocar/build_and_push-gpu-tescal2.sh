@@ -1,8 +1,8 @@
 %%sh
 
 # Update the image variable with your Robocar name (must use all lowercase)
-image=robocar-yikster
-cd /home/ec2-user/SageMaker/donkey/sagetrain/container
+image=robocar-yikster-gpu-tescal2
+# cd /home/ec2-user/SageMaker/donkey/sagetrain/container
 
 #!/usr/bin/env bash
 
