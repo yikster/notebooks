@@ -15,14 +15,12 @@ import traceback
 
 from PIL import Image
 
-BATCH_SIZE = 128 * 2 
+BATCH_SIZE = 128*2
 TRAINING_SPLIT = 0.8
 EPOCHS = 20
 
 prefix = '/home/ec2-user/ml/'
 input_path = prefix + 'inputdata'
-#prefix = '/opt/ml/'
-#input_path = prefix + 'input/data'
 output_path = os.path.join(prefix, 'output')
 model_path = os.path.join(prefix, 'model')
 #param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
@@ -31,10 +29,9 @@ model_loc = os.path.join(model_path, 'car-model.pkl')
 
 # This algorithm has a single channel of input data called 'training'. Since we run in
 # File mode, the input files are copied to the directory specified here.
-#channel_name='training'
-channel_name='tub_20181009_115228'
+channel_name='20181008_070220'
 training_path = os.path.join(input_path, channel_name)
-training_paths = [training_path, training_path]
+
 INPUT_TENSOR_NAME = "inputs"
 SIGNATURE_NAME = "serving_default"
 LEARNING_RATE = 0.001
@@ -565,16 +562,15 @@ def rt(record):
 def default_categorical():
     from keras.layers import Input, Dense, merge
     from keras.models import Model
-    from keras.layers import Cropping2D, Convolution2D, MaxPooling2D, Reshape, BatchNormalization
+    from keras.layers import Convolution2D, MaxPooling2D, Reshape, BatchNormalization
     from keras.layers import Activation, Dropout, Flatten, Dense
     
     img_in = Input(shape=(120, 160, 3), name='img_in')                      # First layer, input layer, Shape comes from camera.py resolution, RGB
     x = img_in
-    x = Cropping2D(cropping=((45,0), (0,0)))(x)
     x = Convolution2D(24, (5,5), strides=(2,2), activation='relu')(x)       # 24 features, 5 pixel x 5 pixel kernel (convolution, feauture) window, 2wx2h stride, relu activation
     x = Convolution2D(32, (5,5), strides=(2,2), activation='relu')(x)       # 32 features, 5px5p kernel window, 2wx2h stride, relu activatiion
     x = Convolution2D(64, (5,5), strides=(2,2), activation='relu')(x)       # 64 features, 5px5p kernal window, 2wx2h stride, relu
-    x = Convolution2D(64, (3,3), strides=(1,1), activation='relu')(x)       # 64 features, 3px3p kernal window, 2wx2h stride, relu
+    x = Convolution2D(64, (3,3), strides=(2,2), activation='relu')(x)       # 64 features, 3px3p kernal window, 2wx2h stride, relu
     x = Convolution2D(64, (3,3), strides=(1,1), activation='relu')(x)       # 64 features, 3px3p kernal window, 1wx1h stride, relu
 
     # Possibly add MaxPooling (will make it less sensitive to position in image).  Camera angle fixed, so may not to be needed
@@ -608,17 +604,7 @@ def train():
         #with open(param_path, 'r') as tc:
         #    trainingParams = json.load(tc)
 
-        #input_files = [ os.path.join(training_path, file) for file in os.listdir(training_path) ]
-        input_files = []
-        print (training_paths)
-        for path in training_paths:
-            print(path) 
-            input_files.extend([ os.path.join(training_path, file) for file in os.listdir(path) ])
-            print(len(input_files))
-
-        for filename in input_files:
-            print(filename) 
-
+        input_files = [ os.path.join(training_path, file) for file in os.listdir(training_path) ]
         if len(input_files) == 0:
             raise ValueError(('There are no files in {}.\n' +
                               'This usually indicates that the channel ({}) was incorrectly specified,\n' +
