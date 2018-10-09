@@ -15,23 +15,26 @@ import traceback
 
 from PIL import Image
 
-BATCH_SIZE = 128
+BATCH_SIZE = 128 * 2 
 TRAINING_SPLIT = 0.8
 EPOCHS = 20
 
-prefix = '/opt/ml/'
-input_path = prefix + 'input/data'
+prefix = '/home/ec2-user/ml/'
+input_path = prefix + 'inputdata'
+#prefix = '/opt/ml/'
+#input_path = prefix + 'input/data'
 output_path = os.path.join(prefix, 'output')
 model_path = os.path.join(prefix, 'model')
-param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
+#param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
 
 model_loc = os.path.join(model_path, 'car-model.pkl')
 
 # This algorithm has a single channel of input data called 'training'. Since we run in
 # File mode, the input files are copied to the directory specified here.
-channel_name='training'
+#channel_name='training'
+channel_name='tub_20181009_115228'
 training_path = os.path.join(input_path, channel_name)
-
+training_paths = [training_path, training_path]
 INPUT_TENSOR_NAME = "inputs"
 SIGNATURE_NAME = "serving_default"
 LEARNING_RATE = 0.001
@@ -601,10 +604,20 @@ def train():
     print('Starting the training.')
     try:
         # Read in any hyperparameters that the user passed with the training job
-        with open(param_path, 'r') as tc:
-            trainingParams = json.load(tc)
+        #with open(param_path, 'r') as tc:
+        #    trainingParams = json.load(tc)
 
-        input_files = [ os.path.join(training_path, file) for file in os.listdir(training_path) ]
+        #input_files = [ os.path.join(training_path, file) for file in os.listdir(training_path) ]
+        input_files = []
+        print (training_paths)
+        for path in training_paths:
+            print(path) 
+            input_files.extend([ os.path.join(training_path, file) for file in os.listdir(path) ])
+            print(len(input_files))
+
+        for filename in input_files:
+            print(filename) 
+
         if len(input_files) == 0:
             raise ValueError(('There are no files in {}.\n' +
                               'This usually indicates that the channel ({}) was incorrectly specified,\n' +

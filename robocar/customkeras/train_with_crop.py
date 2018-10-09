@@ -12,39 +12,32 @@ import random
 import time
 import sys
 import traceback
-#from numpy.random import seed
-#seed(1)
 
 from PIL import Image
-#from tensorflow import set_random_seed
-#set_random_seed(2)
 
-
-BATCH_SIZE = 128*2
+BATCH_SIZE = 128 * 2 
 TRAINING_SPLIT = 0.8
 EPOCHS = 20
 
 prefix = '/home/ec2-user/ml/'
 input_path = prefix + 'inputdata'
+#prefix = '/opt/ml/'
+#input_path = prefix + 'input/data'
 output_path = os.path.join(prefix, 'output')
 model_path = os.path.join(prefix, 'model')
 #param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
 
-model_loc = os.path.join(model_path, 'car-model.pkl-blue-use-cache')
+model_loc = os.path.join(model_path, 'car-model.pkl')
 
 # This algorithm has a single channel of input data called 'training'. Since we run in
 # File mode, the input files are copied to the directory specified here.
-channel_name='20181008_070220'
+#channel_name='training'
+channel_name='tub_20181009_115228'
 training_path = os.path.join(input_path, channel_name)
-training_paths = [training_path] #, training_path]
-
+training_paths = [training_path, training_path]
 INPUT_TENSOR_NAME = "inputs"
 SIGNATURE_NAME = "serving_default"
 LEARNING_RATE = 0.001
-IMAGES = {}
-JSON_RECORDS = {}
-CHECKS = {}
-IMAGE_VALS = {}
 
 class Tub(object):
     """
@@ -244,10 +237,6 @@ class Tub(object):
 
     def get_json_record(self, ix):
         path = self.get_json_record_path(ix)
-        if path in JSON_RECORDS:
-        #    print("already loaded path={}".format(path))
-            return JSON_RECORDS[path]
-
         try:
             with open(path, 'r') as fp:
                 json_data = json.load(fp)
@@ -260,8 +249,6 @@ class Tub(object):
             raise
 
         record_dict = self.make_record_paths_absolute(json_data)
-        #JSON_RECORDS[path] = record_dict
-        #print(JSON_RECORDS[path])
         return record_dict
 
 
@@ -282,16 +269,6 @@ class Tub(object):
             if typ == 'image_array':
                 img = Image.open((val))
                 val = np.array(img)
-                #val is path of image
-                #if val in IMAGE_VALS :
-                #    #print("{} is already loaded".format(val))
-                #    val = IMAGE_VALS[val]
-                #else :
-                #    #print("{} is loading".format(val))
-                #    img = Image.open((val))
-                #    IMAGE_VALS[val] = np.array(img)
-                #    #print("size is {} is loading".format(len(IMAGE_VALS[val])))
-              
 
             data[key] = val
 
@@ -588,11 +565,12 @@ def rt(record):
 def default_categorical():
     from keras.layers import Input, Dense, merge
     from keras.models import Model
-    from keras.layers import Convolution2D, MaxPooling2D, Reshape, BatchNormalization
+    from keras.layers import Cropping2D, Convolution2D, MaxPooling2D, Reshape, BatchNormalization
     from keras.layers import Activation, Dropout, Flatten, Dense
     
     img_in = Input(shape=(120, 160, 3), name='img_in')                      # First layer, input layer, Shape comes from camera.py resolution, RGB
     x = img_in
+    x = Cropping2D(cropping=((60,0), (0,0)))(x)
     x = Convolution2D(24, (5,5), strides=(2,2), activation='relu')(x)       # 24 features, 5 pixel x 5 pixel kernel (convolution, feauture) window, 2wx2h stride, relu activation
     x = Convolution2D(32, (5,5), strides=(2,2), activation='relu')(x)       # 32 features, 5px5p kernel window, 2wx2h stride, relu activatiion
     x = Convolution2D(64, (5,5), strides=(1,1), activation='relu')(x)       # 64 features, 5px5p kernal window, 2wx2h stride, relu
@@ -629,13 +607,18 @@ def train():
         # Read in any hyperparameters that the user passed with the training job
         #with open(param_path, 'r') as tc:
         #    trainingParams = json.load(tc)
-       
-        input_files = [] 
-        for path in training_paths:
-            input_files.extend([ os.path.join(training_path, file) for file in os.listdir(path) ])
-	
+
         #input_files = [ os.path.join(training_path, file) for file in os.listdir(training_path) ]
-        
+        input_files = []
+        print (training_paths)
+        for path in training_paths:
+            print(path) 
+            input_files.extend([ os.path.join(training_path, file) for file in os.listdir(path) ])
+            print(len(input_files))
+
+        for filename in input_files:
+            print(filename) 
+
         if len(input_files) == 0:
             raise ValueError(('There are no files in {}.\n' +
                               'This usually indicates that the channel ({}) was incorrectly specified,\n' +
@@ -663,7 +646,7 @@ def train():
         #stop training if the validation error stops improving.
         early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', 
                                                        min_delta=0.0005, 
-                                                       patience=5, 
+                                                       patience=2, 
                                                        verbose=1, 
                                                        mode='auto')
         callbacks_list = [save_best]
