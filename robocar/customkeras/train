@@ -27,12 +27,12 @@ output_path = os.path.join(prefix, 'output')
 model_path = os.path.join(prefix, 'model')
 #param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
 
-model_loc = os.path.join(model_path, 'car-model.pkl')
+model_loc = os.path.join(model_path, 'car-model.blue-20181011_02-train.')
 
 # This algorithm has a single channel of input data called 'training'. Since we run in
 # File mode, the input files are copied to the directory specified here.
 #channel_name='training'
-channel_name='tub_20181009_115228'
+channel_name='tub_20181011_022147'
 training_path = os.path.join(input_path, channel_name)
 training_paths = [training_path, training_path]
 INPUT_TENSOR_NAME = "inputs"

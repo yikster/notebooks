@@ -30,11 +30,11 @@ output_path = os.path.join(prefix, 'output')
 model_path = os.path.join(prefix, 'model')
 #param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
 
-model_loc = os.path.join(model_path, 'car-model.pkl-blue-use-cache')
+model_loc = os.path.join(model_path, 'car-model.pkl-blue-office-20181011_022147')
 
 # This algorithm has a single channel of input data called 'training'. Since we run in
 # File mode, the input files are copied to the directory specified here.
-channel_name='20181008_070220'
+channel_name='tub_20181011_022147'
 training_path = os.path.join(input_path, channel_name)
 training_paths = [training_path] #, training_path]
 
@@ -244,9 +244,9 @@ class Tub(object):
 
     def get_json_record(self, ix):
         path = self.get_json_record_path(ix)
-        if path in JSON_RECORDS:
+        #if path in JSON_RECORDS:
         #    print("already loaded path={}".format(path))
-            return JSON_RECORDS[path]
+        #    return JSON_RECORDS[path]
 
         try:
             with open(path, 'r') as fp:
@@ -616,7 +616,7 @@ def default_categorical():
     model.compile(optimizer='adam',
                   loss={'angle_out': 'categorical_crossentropy', 
                         'throttle_out': 'mean_absolute_error'},
-                  loss_weights={'angle_out': 0.9, 'throttle_out': .001})
+                  loss_weights={'angle_out': 0.9, 'throttle_out': .00001})
 
     return model
 
