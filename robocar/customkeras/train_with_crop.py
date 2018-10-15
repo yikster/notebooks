@@ -19,22 +19,24 @@ BATCH_SIZE = 128 * 2
 TRAINING_SPLIT = 0.8
 EPOCHS = 20
 
-prefix = '/home/ec2-user/ml/'
-input_path = prefix + 'inputdata'
+prefix = '/home/ec2-user/SageMaker/'
+input_path = prefix + 'traindata'
 #prefix = '/opt/ml/'
 #input_path = prefix + 'input/data'
 output_path = os.path.join(prefix, 'output')
 model_path = os.path.join(prefix, 'model')
 #param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
 
-model_loc = os.path.join(model_path, 'car-model.pkl')
+model_loc = os.path.join(model_path, 'car-model.pkl-20181011_022147-with-crop')
 
 # This algorithm has a single channel of input data called 'training'. Since we run in
 # File mode, the input files are copied to the directory specified here.
 #channel_name='training'
-channel_name='tub_20181009_115228'
+channel_name  ='tub_20181015_051246'
 training_path = os.path.join(input_path, channel_name)
-training_paths = [training_path, training_path]
+channel_name2 ='tub_20181011_022147'
+training_path2 = os.path.join(input_path, channel_name2)
+training_paths = [training_path, training_path2]
 INPUT_TENSOR_NAME = "inputs"
 SIGNATURE_NAME = "serving_default"
 LEARNING_RATE = 0.001
@@ -613,7 +615,7 @@ def train():
         print (training_paths)
         for path in training_paths:
             print(path) 
-            input_files.extend([ os.path.join(training_path, file) for file in os.listdir(path) ])
+            input_files.extend([ os.path.join(path, file) for file in os.listdir(path) ])
             print(len(input_files))
 
         for filename in input_files:
@@ -625,7 +627,8 @@ def train():
                               'the data specification in S3 was incorrectly specified or the role specified\n' +
                               'does not have permission to access the data.').format(training_path, channel_name))
 
-        tubgroup = TubGroup(training_path)
+        paths = ",".join(training_paths)
+        tubgroup = TubGroup(paths)
 
 
         total_records = len(tubgroup.df)
