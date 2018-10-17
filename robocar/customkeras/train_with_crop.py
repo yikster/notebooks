@@ -27,16 +27,16 @@ output_path = os.path.join(prefix, 'output')
 model_path = os.path.join(prefix, 'model')
 #param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
 
-model_loc = os.path.join(model_path, 'blue-model-k2.1.5-20181017_020822-with-crop')
+model_loc = os.path.join(model_path, 'blue-model-k2.1.5-20181017_124823-with-crop')
 
 # This algorithm has a single channel of input data called 'training'. Since we run in
 # File mode, the input files are copied to the directory specified here.
 #channel_name='training'
-channel_name  ='tub_20181017_020822'
+channel_name ='tub_20181017_124823'
+channel_name2 ='tub_20181017_020822'
 training_path = os.path.join(input_path, channel_name)
-channel_name2 ='tub_20181011_022147'
 training_path2 = os.path.join(input_path, channel_name2)
-training_paths = [training_path]
+training_paths = [training_path, training_path2]
 INPUT_TENSOR_NAME = "inputs"
 SIGNATURE_NAME = "serving_default"
 LEARNING_RATE = 0.001
