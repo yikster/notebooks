@@ -12,10 +12,11 @@ import random
 import time
 import sys
 import traceback
+import cv2
 
 from PIL import Image
 
-BATCH_SIZE = 128 * 2 
+BATCH_SIZE = 128
 TRAINING_SPLIT = 0.8
 EPOCHS = 20
 
@@ -24,7 +25,7 @@ input_path = prefix + 'traindata'
 #prefix = '/opt/ml/'
 #input_path = prefix + 'input/data'
 output_path = os.path.join(prefix, 'output')
-model_path = os.path.join(prefix, 'model')
+model_path = os.path.join(prefix, 'models')
 #param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
 
 model_loc = os.path.join(model_path, 'blue-model-k2.1.5-20181017_124823-with-crop')
@@ -40,6 +41,7 @@ training_paths = [training_path, training_path2]
 INPUT_TENSOR_NAME = "inputs"
 SIGNATURE_NAME = "serving_default"
 LEARNING_RATE = 0.001
+USE_= True
 
 class Tub(object):
     """
@@ -95,6 +97,7 @@ class Tub(object):
         return max(index)
 
     def update_df(self):
+        print('update_df')
         df = pd.DataFrame([self.get_json_record(i) for i in self.get_index(shuffled=False)])
         self.df = df
 
@@ -337,12 +340,74 @@ class Tub(object):
 
         batch_gen = self.get_batch_gen(X_keys + Y_keys,
                                        batch_size=batch_size, record_transform=record_transform, df=df)
-
+        
+        debug = False
+        idx = 0
+        
         while True:
             batch = next(batch_gen)
             X = [batch[k] for k in X_keys]
+            X_flip = [ np.flip(k, 2) for k in X ]
+            
+            if debug == True:
+                print("batch.X_keys={}".format(X_keys))
+                print("len of X={}".format(len(X)))
+                print('@'*100)
+                print(X[0].shape)
+
+                filename = './before_flip_{:05d}.jpg'.format(idx)
+                cv2.imwrite(filename, X[0][0])
+            
+                filename = './after_flip_{:05d}.jpg'.format(idx)
+                cv2.imwrite(filename, X_flip[0][0])
+
+
+            
+                print("^"*100)
+                print(len(X_flip))
+                print(X_flip[0].shape)
+            
             Y = [batch[k] for k in Y_keys]
+
+            if debug == True:
+                print("len of Y ={}".format(len(Y)))
+                print("batch.Y_keys={}".format(Y_keys))
+                print("batch.Y[0][{}]={}".format(idx, Y[0][idx]))
+
+            Y_0_flip = np.flip(Y[0], 1)
+            Y_1_flip = Y[1]
+            idx += 1            
+
+            if debug == True:
+                print("batch.Y_flip[0][{}]={}".format(idx, Y_0_flip[idx]))                    
+                print("batch.Y_flip[0][{}]={}".format(idx, Y_0_flip[idx]))                    
+                print("------> before extend X {}".format(len(X)))
+            
+            X[0]=np.append(X[0],X_flip[0],axis=0)
+            Y[0]=np.append(Y[0],Y_0_flip,axis=0)
+            Y[1]=np.append(Y[1],Y_1_flip,axis=0)
+#             Y.extend(Y_flip)
+            
+            if debug:
+                print('-'*10)
+                print(type(X))
+                print(type(Y))
+                print(X[0].shape)
+                print(Y[0].shape)
+                print(Y[1].shape)
+                print('*'*10)
+                print(X[0].shape)
+                print(Y[0].shape)
+                print(Y[1].shape)
+
+                print("!"*100)
+
+                print(X[0][:,:,0])
+                print(X_flip[0][:,:,0])
+            
             yield X, Y
+
+
 
 
     def get_train_val_gen(self, X_keys, Y_keys, batch_size=128, record_transform=None, train_frac=.8):
@@ -572,10 +637,10 @@ def default_categorical():
     
     img_in = Input(shape=(120, 160, 3), name='img_in')                      # First layer, input layer, Shape comes from camera.py resolution, RGB
     x = img_in
-    x = Cropping2D(cropping=((45,0), (0,0)))(x)
+    x = Cropping2D(cropping=((40,30), (40,40)))(x)
     x = Convolution2D(24, (5,5), strides=(2,2), activation='relu')(x)       # 24 features, 5 pixel x 5 pixel kernel (convolution, feauture) window, 2wx2h stride, relu activation
-    x = Convolution2D(32, (5,5), strides=(2,2), activation='relu')(x)       # 32 features, 5px5p kernel window, 2wx2h stride, relu activatiion
-    x = Convolution2D(64, (5,5), strides=(2,2), activation='relu')(x)       # 64 features, 5px5p kernal window, 2wx2h stride, relu
+    x = Convolution2D(32, (5,5), strides=(1,1), activation='relu')(x)       # 32 features, 5px5p kernel window, 2wx2h stride, relu activatiion
+    x = Convolution2D(64, (5,5), strides=(1,1), activation='relu')(x)       # 64 features, 5px5p kernal window, 2wx2h stride, relu
     x = Convolution2D(64, (3,3), strides=(1,1), activation='relu')(x)       # 64 features, 3px3p kernal window, 2wx2h stride, relu
     x = Convolution2D(64, (3,3), strides=(1,1), activation='relu')(x)       # 64 features, 3px3p kernal window, 1wx1h stride, relu
 
@@ -614,12 +679,8 @@ def train():
         input_files = []
         print (training_paths)
         for path in training_paths:
-            print(path) 
             input_files.extend([ os.path.join(path, file) for file in os.listdir(path) ])
             print(len(input_files))
-
-        for filename in input_files:
-            print(filename) 
 
         if len(input_files) == 0:
             raise ValueError(('There are no files in {}.\n' +
