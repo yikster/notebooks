@@ -41,7 +41,7 @@ training_paths = [training_path, training_path2]
 INPUT_TENSOR_NAME = "inputs"
 SIGNATURE_NAME = "serving_default"
 LEARNING_RATE = 0.001
-USE_= True
+USE_FLIP = False
 
 class Tub(object):
     """
@@ -374,8 +374,10 @@ class Tub(object):
                 print("batch.Y_keys={}".format(Y_keys))
                 print("batch.Y[0][{}]={}".format(idx, Y[0][idx]))
 
-            Y_0_flip = np.flip(Y[0], 1)
-            Y_1_flip = Y[1]
+            if USE_FLIP:
+                Y_0_flip = np.flip(Y[0], 1)
+                Y_1_flip = Y[1]
+                
             idx += 1            
 
             if debug == True:
@@ -383,9 +385,10 @@ class Tub(object):
                 print("batch.Y_flip[0][{}]={}".format(idx, Y_0_flip[idx]))                    
                 print("------> before extend X {}".format(len(X)))
             
-            X[0]=np.append(X[0],X_flip[0],axis=0)
-            Y[0]=np.append(Y[0],Y_0_flip,axis=0)
-            Y[1]=np.append(Y[1],Y_1_flip,axis=0)
+            if USE_FLIP:
+                X[0]=np.append(X[0],X_flip[0],axis=0)
+                Y[0]=np.append(Y[0],Y_0_flip,axis=0)
+                Y[1]=np.append(Y[1],Y_1_flip,axis=0)
 #             Y.extend(Y_flip)
             
             if debug:
@@ -637,7 +640,7 @@ def default_categorical():
     
     img_in = Input(shape=(120, 160, 3), name='img_in')                      # First layer, input layer, Shape comes from camera.py resolution, RGB
     x = img_in
-    x = Cropping2D(cropping=((40,30), (40,40)))(x)
+    x = Cropping2D(cropping=((50,30), (40,40)))(x)
     x = Convolution2D(24, (5,5), strides=(2,2), activation='relu')(x)       # 24 features, 5 pixel x 5 pixel kernel (convolution, feauture) window, 2wx2h stride, relu activation
     x = Convolution2D(32, (5,5), strides=(1,1), activation='relu')(x)       # 32 features, 5px5p kernel window, 2wx2h stride, relu activatiion
     x = Convolution2D(64, (5,5), strides=(1,1), activation='relu')(x)       # 64 features, 5px5p kernal window, 2wx2h stride, relu
