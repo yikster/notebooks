@@ -13,46 +13,25 @@ import time
 import sys
 import traceback
 import cv2
+import boto3
+import tarfile
+from io import BytesIO
 
 from PIL import Image
 
-BATCH_SIZE = 128 * 4 # 34s 628ms/step - loss: 0.3123 - angle_out_loss: 0.3467 - throttle_out_loss: 0.2807 -val_loss: 0.6957 - val_angle_out_loss: 0.7727 - val_throttle_out_loss: 0.2875
-BATCH_SIZE = 128 * 8 # TOO BAD
-
-LEARNING_RATE = 0.001
-BATCH_SIZE = 128 * 2 # user    13m 0.546s, 34s 312ms/step - loss: 0.3515 - angle_out_loss: 0.3905 - throttle_out_loss: 0.0081- val_loss: 0.6858 - val_angle_out_loss: 0.7620 - val_throttle_out_loss: 0.0138
-
-LEARNING_RATE = 0.005
-BATCH_SIZE = 128 * 2 # user    11m15.110s, 34s 313ms/step - loss: 0.3346 - angle_out_loss: 0.3715 - throttle_out_loss: 0.2804- val_loss: 0.7893 - val_angle_out_loss: 0.8767 - val_throttle_out_loss: 0.2872
-# Epoch 00017: val_loss did not improve
-# Epoch 00017: early stopping
-
-LEARNING_RATE = 0.01
-BATCH_SIZE = 128 * 2 # user    13m 0.405s, 34s 310ms/step - loss: 0.3052 - angle_out_loss: 0.3388 - throttle_out_loss: 0.2810- val_loss: 0.6646 - val_angle_out_loss: 0.7381 - val_throttle_out_loss: 0.2870
-
-LEARNING_RATE = 0.015 
-BATCH_SIZE = 128 * 2  # BAD
-
-LEARNING_RATE = 0.008
-BATCH_SIZE = 128 * 2  # BAD
-
-LEARNING_RATE = 0.0085
-BATCH_SIZE = 128 * 2  # BAD
-
-OPTIMIZER='adam'
-LEARNING_RATE = 0.009
-BATCH_SIZE = 128 * 2  # user    13m 5.584s, 34s 312ms/step - loss: 0.2969 - angle_out_loss: 0.3296 - throttle_out_loss: 0.2821- val_loss: 0.7859 - val_angle_out_loss: 0.8729 - val_throttle_out_loss: 0.2882
-
-OPTIMIZER='adam'
-LEARNING_RATE = 0.009
-BATCH_SIZE = 128 * 2  # user    13m 5.584s, 34s 312ms/step - loss: 0.2969 - angle_out_loss: 0.3296 - throttle_out_loss: 0.2821- val_loss: 0.7859 - val_angle_out_loss: 0.8729 - val_throttle_out_loss: 0.2882
 
 
 ## DEFAULT VALUE
+
+OPTIMIZER='adam'
 LEARNING_RATE = 0.001
 BATCH_SIZE = 128 * 2
 TRAINING_SPLIT = 0.8
 EPOCHS = 20
+
+
+TEMP_INPUT_PATH='/tmp/traindata'
+MODEL_NAME='blue-model-k2.1.5-20181017_124823_3-with-crop'
 
 prefix = '/home/ec2-user/SageMaker/'
 input_path = prefix + 'traindata'
@@ -62,7 +41,41 @@ output_path = os.path.join(prefix, 'output')
 model_path = os.path.join(prefix, 'models')
 #param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
 
-model_loc = os.path.join(model_path, 'blue-model-k2.1.5-20181017_124823_3-with-crop')
+model_loc = os.path.join(model_path, MODEL_NAME)
+
+channel_names = ["tub_20181017_124823", "tub_20181017_020822", "tub_20181018_040506", "tub_20181019_102454_cleaned" ]
+'''
+113/113 [==============================] - 36s 323ms/step - loss: 0.3117 - angle_out_loss: 0.3178 - throttle_out_loss: 0.2759 - val_loss: 0.7989 - val_angle_out_loss: 0.8149 - val_throttle_out_loss: 0.2815
+'''
+
+
+def getTubTarFromS3(bucket, tubname):
+    client = boto3.client('s3')
+    key = "tars/" + tubname + ".tar" 
+    download_filename ='/tmp/tars/' + tubname + ".tar"
+    
+    print(key + "-->" + download_filename)
+    client.download_file(bucket, key, download_filename)
+    
+def extractTubFromS3(bucket, tubname, input_path="/tmp/traindata"):
+    global channel_names
+    global training_paths
+    global model_loc
+    
+    client = boto3.client('s3')
+    key = "tars/" + tubname + ".tar" 
+
+    response = client.get_object(Bucket=bucket, Key=key)
+    tarfile_obj =BytesIO(response['Body'].read())
+    
+    channel_names = [ tubname ]
+    with tarfile.open(name=None, mode="r:*", fileobj=tarfile_obj) as tarball:
+        tarball.extractall(input_path)
+        print(channel_names)
+        training_paths = [ os.path.join(input_path, channel) for channel in channel_names ]
+        model_loc = "/tmp/model/" + tubname + "-model"
+
+    
 
 # This algorithm has a single channel of input data called 'training'. Since we run in
 # File mode, the input files are copied to the directory specified here.
@@ -90,14 +103,33 @@ Epoch 15/20
 152/152 [==============================] - 55s 363ms/step - loss: 0.3059 - angle_out_loss: 0.3118 - throttle_out_loss: 0.2779 - val_loss: 0.9278 - val_angle_out_loss: 0.9464 - val_throttle_out_loss: 0.2827
 '''
 
-channel_names = ["tub_20181017_124823", "tub_20181017_020822", "tub_20181018_040506", "tub_20181019_102454_cleaned" ]
-'''
-113/113 [==============================] - 36s 323ms/step - loss: 0.3117 - angle_out_loss: 0.3178 - throttle_out_loss: 0.2759 - val_loss: 0.7989 - val_angle_out_loss: 0.8149 - val_throttle_out_loss: 0.2815
-'''
 # training_path = os.path.join(input_path, channel_name)
 # training_path2 = os.path.join(input_path, channel_name2)
 # training_paths = [training_path, training_path2]
 training_paths = [ os.path.join(input_path, channel) for channel in channel_names ]
+
+'''
+FIND BUCKET_PREFIX in OS.env s3://bucketname/prefix
+FIND TUBS in OS.env = tub_2018,tub_2019
+'''
+
+
+
+if os.environ.get('BUCKET') != None and os.environ.get('TUBS') != None:
+    BUCKET = os.environ['BUCKET']
+    TUBS = os.environ['TUBS']
+    print(BUCKET)
+    print(TUBS)
+
+    if len(BUCKET) > 0 and len(TUBS) > 0:
+
+        MODEL_NAME=TUBS + ".model"
+    
+        input_path="/tmp/train_data"
+        getTubTarFromS3(BUCKET, TUBS)
+        extractTubFromS3(BUCKET, TUBS)
+
+
 
 INPUT_TENSOR_NAME = "inputs"
 SIGNATURE_NAME = "serving_default"

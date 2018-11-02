@@ -18,7 +18,7 @@ image=robocar-yikster-gpu-tescal2
 #    exit 1
 #fi
 
-chmod +x customkeras/train
+chmod +x train_with_crop.py
 
 # Get the account number associated with the current IAM credentials
 account=$(aws sts get-caller-identity --query Account --output text)
@@ -30,7 +30,7 @@ fi
 
 # Get the region defined in the current configuration (default to us-west-2 if none defined)
 region=$(aws configure get region)
-region=${region:-ap-northeast-1}
+#region=${region:-ap-northeast-1}
 
 fullname="${account}.dkr.ecr.${region}.amazonaws.com/${image}:latest"
 
